@@ -1,5 +1,8 @@
 *** WooCommerce Product Bundles ***
 
+2018.06.14 - version 5.7.11
+* Fix - Add missing parameters to 'woocommerce_get_price_suffix' filter in 'WC_Product_Bundle::get_price_suffix'.
+
 2018.05.24 - version 5.7.10
 * Tweak - Added a section in the WordPress Privacy Policy Guide to let store owners know that Product Bundles does not collect, store or share personal data.
 

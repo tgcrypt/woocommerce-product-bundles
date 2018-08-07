@@ -2,9 +2,9 @@
 # This file is distributed under the GNU General Public License v3.0.
 msgid ""
 msgstr ""
-"Project-Id-Version: WooCommerce Product Bundles 5.7.10\n"
+"Project-Id-Version: WooCommerce Product Bundles 5.7.11\n"
 "Report-Msgid-Bugs-To: https://woocommerce.com/my-account/create-a-ticket/\n"
-"POT-Creation-Date: 2018-05-24 12:24:10+00:00\n"
+"POT-Creation-Date: 2018-06-14 16:22:19+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -85,7 +85,7 @@ msgstr ""
 #: includes/admin/class-wc-pb-admin.php:273
 #: includes/admin/meta-boxes/class-wc-pb-meta-box-product-data.php:1134
 #: includes/class-wc-bundled-item.php:1939 includes/class-wc-pb-display.php:206
-#: includes/class-wc-product-bundle.php:1122
+#: includes/class-wc-product-bundle.php:1124
 #: tests/unit/test-wc-product-bundle.php:513
 msgid "Insufficient stock"
 msgstr ""
@@ -569,7 +569,7 @@ msgid "(only %s left in stock)"
 msgstr ""
 
 #: includes/class-wc-bundled-item.php:1953 includes/class-wc-pb-display.php:207
-#: includes/class-wc-product-bundle.php:1127
+#: includes/class-wc-product-bundle.php:1129
 #: tests/unit/test-wc-product-bundle.php:538
 msgid "Available on backorder"
 msgstr ""
@@ -695,9 +695,9 @@ msgid ""
 msgstr ""
 
 #: includes/class-wc-pb-display.php:200
-#: includes/class-wc-product-bundle.php:939
-#: includes/class-wc-product-bundle.php:1033
-#: includes/class-wc-product-bundle.php:1080
+#: includes/class-wc-product-bundle.php:941
+#: includes/class-wc-product-bundle.php:1035
+#: includes/class-wc-product-bundle.php:1082
 msgid "Free!"
 msgstr ""
 
@@ -1032,59 +1032,59 @@ msgstr ""
 msgid "The product is currently unavailable."
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:1154
+#: includes/class-wc-product-bundle.php:1156
 #: tests/unit/test-wc-product-bundle.php:567
 msgid "Read more"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:1159
+#: includes/class-wc-product-bundle.php:1161
 #: tests/unit/test-wc-product-bundle.php:559
 msgid "Select options"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:1161
-#: includes/class-wc-product-bundle.php:1176
+#: includes/class-wc-product-bundle.php:1163
+#: includes/class-wc-product-bundle.php:1178
 #: tests/unit/test-wc-product-bundle.php:584
 msgid "Add to cart"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:1183
+#: includes/class-wc-product-bundle.php:1185
 msgid "Update Cart"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:2350
-#: includes/class-wc-product-bundle.php:2444
+#: includes/class-wc-product-bundle.php:2352
+#: includes/class-wc-product-bundle.php:2446
 msgid "Default"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:2351
+#: includes/class-wc-product-bundle.php:2353
 msgid "The add-to-cart form is displayed inside the single-product summary."
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:2354
+#: includes/class-wc-product-bundle.php:2356
 msgid "After summary"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:2355
+#: includes/class-wc-product-bundle.php:2357
 msgid ""
 "The add-to-cart form is displayed after the single-product summary. Usually "
 "allocates the entire page width for displaying form content. Note that some "
 "themes may not support this option."
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:2370
+#: includes/class-wc-product-bundle.php:2372
 msgid "Standard"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:2371
+#: includes/class-wc-product-bundle.php:2373
 msgid "Tabular"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:2449
+#: includes/class-wc-product-bundle.php:2451
 msgid "No indent"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:2454
+#: includes/class-wc-product-bundle.php:2456
 msgid "No parent"
 msgstr ""
 
@@ -1337,27 +1337,27 @@ msgid ""
 "style=\"display:none\"> now,</br>then %2$s</span>"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:957
+#: includes/class-wc-product-bundle.php:959
 msgctxt "subscription price html suffix"
 msgid ""
 "%1$s<span class=\"bundled_subscriptions_price_html\" %2$s> now,</br>then "
 "%3$s</span>"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:921
+#: includes/class-wc-product-bundle.php:923
 msgctxt "min-price"
 msgid "<span class=\"from\">from </span>"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:921
+#: includes/class-wc-product-bundle.php:923
 msgctxt "min-price"
 msgid "<span class=\"from\">From: </span>"
 msgstr ""
 
-#: includes/class-wc-product-bundle.php:933
-#: includes/class-wc-product-bundle.php:942
-#: includes/class-wc-product-bundle.php:1018
-#: includes/class-wc-product-bundle.php:1039
+#: includes/class-wc-product-bundle.php:935
+#: includes/class-wc-product-bundle.php:944
+#: includes/class-wc-product-bundle.php:1020
+#: includes/class-wc-product-bundle.php:1041
 msgctxt "Price range: from"
 msgid "%1$s%2$s"
 msgstr ""

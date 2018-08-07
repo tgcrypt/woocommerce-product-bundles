@@ -3,7 +3,7 @@
 * Plugin Name: WooCommerce Product Bundles
 * Plugin URI: https://woocommerce.com/products/product-bundles/
 * Description: Offer product bundles and assembled products in your WooCommerce store.
-* Version: 5.7.10
+* Version: 5.7.11
 * Author: SomewhereWarm
 * Author URI: https://somewherewarm.gr/
 *
@@ -51,11 +51,11 @@ if ( ! is_woocommerce_active() ) {
  * Main plugin class.
  *
  * @class    WC_Bundles
- * @version  5.7.10
+ * @version  5.7.11
  */
 class WC_Bundles {
 
-	public $version  = '5.7.10';
+	public $version  = '5.7.11';
 	public $required = '3.0.0';
 
 	/**

@@ -847,8 +847,10 @@ class WC_Product_Bundle extends WC_Product {
 			 *
 			 * @param  string             $price_suffix
 			 * @param  WC_Product_Bundle  $this
+			 * @param  mixed              $price
+			 * @param  int                $qty
 			 */
-			return apply_filters( 'woocommerce_get_price_suffix', $price_suffix, $this );
+			return apply_filters( 'woocommerce_get_price_suffix', $price_suffix, $this, $price, $qty );
 
 		} else {
 			return parent::get_price_suffix();
