@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Used to create and store a product_id / variation_id representation of a product collection based on the included items' inventory requirements.
  *
  * @class    WC_PB_Stock_Manager
- * @version  5.7.4
+ * @version  5.8.0
  */
 class WC_PB_Stock_Manager {
 
@@ -129,28 +129,14 @@ class WC_PB_Stock_Manager {
 	}
 
 	/**
-	 * Validate that all managed items in the collection are in stock.
+	 * Product quantities already in cart.
 	 *
-	 * @throws Exception
+	 * @since  5.8.0
 	 *
-	 * @param  array  $args
-	 * @return boolean
+	 * @return array
 	 */
-	public function validate_stock( $args = array() ) {
+	private function get_quantities_in_cart() {
 
-		$context         = isset( $args[ 'context' ] ) ? $args[ 'context' ] : 'add-to-cart';
-		$throw_exception = isset( $args[ 'throw_exception' ] ) && $args[ 'throw_exception' ];
-
-		$managed_items = $this->get_managed_items();
-
-		if ( empty( $managed_items ) ) {
-			return true;
-		}
-
-		$bundle_id    = $this->product->get_id();
-		$bundle_title = $this->product->get_title();
-
-		// Product quantities already in cart.
 		$quantities_in_cart = WC()->cart->get_cart_item_quantities();
 
 		// If we are updating a bundle in-cart, subtract the bundled item cart quantites that belong to the bundle being updated, since it's going to be removed later on.
@@ -187,6 +173,31 @@ class WC_PB_Stock_Manager {
 				}
 			}
 		}
+
+		return $quantities_in_cart;
+	}
+
+	/**
+	 * Validate that all managed items in the collection are in stock.
+	 *
+	 * @throws Exception
+	 *
+	 * @param  array  $args
+	 * @return boolean
+	 */
+	public function validate_stock( $args = array() ) {
+
+		$context         = isset( $args[ 'context' ] ) ? $args[ 'context' ] : 'add-to-cart';
+		$throw_exception = isset( $args[ 'throw_exception' ] ) && $args[ 'throw_exception' ];
+
+		$managed_items = $this->get_managed_items();
+
+		if ( empty( $managed_items ) ) {
+			return true;
+		}
+
+		$bundle_id    = $this->product->get_id();
+		$bundle_title = $this->product->get_title();
 
 		// Stock Validation.
 		foreach ( $managed_items as $managed_item_id => $managed_item ) {
@@ -254,6 +265,8 @@ class WC_PB_Stock_Manager {
 
 				// Stock check - this time accounting for whats already in-cart.
 				if ( $product_data->managing_stock() ) {
+
+					$quantities_in_cart = $this->get_quantities_in_cart();
 
 					if ( isset( $quantities_in_cart[ $managed_item_id ] ) && ! $product_data->has_enough_stock( $quantities_in_cart[ $managed_item_id ] + $quantity ) ) {
 

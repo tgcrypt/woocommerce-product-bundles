@@ -213,7 +213,7 @@ class WC_PB_PIP_Compatibility {
 						}
 
 						// By default, nothing should be hidden in invoices, but here's an exception.
-						if ( false === WC_Product_Bundle::group_mode_has( $group_mode, 'parent_item' ) ) {
+						if ( false === WC_Product_Bundle::group_mode_has( $group_mode, 'parent_item' ) || WC_Product_Bundle::group_mode_has( $group_mode, 'component_multiselect' )  ) {
 							$show_parent = false;
 						}
 

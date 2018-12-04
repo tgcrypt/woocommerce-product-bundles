@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Loads admin scripts, includes admin classes and adds admin hooks.
  *
  * @class    WC_PB_Admin
- * @version  5.7.10
+ * @version  5.9.0
  */
 class WC_PB_Admin {
 
@@ -30,7 +30,7 @@ class WC_PB_Admin {
 		add_action( 'init', array( __CLASS__, 'admin_init' ) );
 
 		// Add a message in the WP Privacy Policy Guide page.
-		add_action( 'admin_init', array( __CLASS__,'add_privacy_policy_guide_content' ) );
+		add_action( 'admin_init', array( __CLASS__, 'add_privacy_policy_guide_content' ) );
 
 		// Enqueue scripts.
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'admin_scripts' ), 11 );
@@ -43,6 +43,8 @@ class WC_PB_Admin {
 
 		// Add "Insufficient Stock" report tab.
 		add_filter( 'woocommerce_admin_reports', array( __CLASS__, 'add_insufficient_stock_report_tab' ) );
+		add_action( 'admin_print_styles', array( __CLASS__, 'maybe_add_insufficient_stock_report_notice' ) );
+
 	}
 
 	/**
@@ -90,6 +92,11 @@ class WC_PB_Admin {
 
 		// Admin AJAX.
 		require_once( 'class-wc-pb-admin-ajax.php' );
+
+		// Admin edit-order screen.
+		if ( WC_PB_Core_Compatibility::is_wc_version_gte( '3.2' ) ) {
+			require_once( 'class-wc-pb-admin-order.php' );
+		}
 	}
 
 	/**
@@ -110,25 +117,37 @@ class WC_PB_Admin {
 
 		$suffix = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ? '' : '.min';
 
-		wp_register_script( 'wc-pb-admin-product-panel', WC_PB()->plugin_url() . '/assets/js/wc-pb-admin-write-panels' . $suffix . '.js', array( 'jquery', 'jquery-ui-datepicker', 'wc-admin-meta-boxes' ), WC_PB()->version );
+		wp_register_script( 'wc-pb-admin-product-panel', WC_PB()->plugin_url() . '/assets/js/admin/meta-boxes-product' . $suffix . '.js', array( 'wc-admin-product-meta-boxes' ), WC_PB()->version );
+		wp_register_script( 'wc-pb-admin-order-panel', WC_PB()->plugin_url() . '/assets/js/admin/meta-boxes-order' . $suffix . '.js', array( 'wc-admin-order-meta-boxes' ), WC_PB()->version );
 
-		wp_register_style( 'wc-pb-admin-css', WC_PB()->plugin_url() . '/assets/css/wc-pb-admin.css', array(), WC_PB()->version );
+		wp_register_style( 'wc-pb-admin-css', WC_PB()->plugin_url() . '/assets/css/admin/admin.css', array(), WC_PB()->version );
 		wp_style_add_data( 'wc-pb-admin-css', 'rtl', 'replace' );
 
-		wp_register_style( 'wc-pb-admin-product-css', WC_PB()->plugin_url() . '/assets/css/wc-pb-admin-write-panels.css', array( 'woocommerce_admin_styles' ), WC_PB()->version );
+		wp_register_style( 'wc-pb-admin-product-css', WC_PB()->plugin_url() . '/assets/css/admin/meta-boxes-product.css', array( 'woocommerce_admin_styles' ), WC_PB()->version );
 		wp_style_add_data( 'wc-pb-admin-product-css', 'rtl', 'replace' );
 
-		wp_register_style( 'wc-pb-admin-edit-order-css', WC_PB()->plugin_url() . '/assets/css/wc-pb-admin-edit-order.css', array( 'woocommerce_admin_styles' ), WC_PB()->version );
+		wp_register_style( 'wc-pb-admin-edit-order-css', WC_PB()->plugin_url() . '/assets/css/admin/meta-boxes-order.css', array( 'woocommerce_admin_styles' ), WC_PB()->version );
 		wp_style_add_data( 'wc-pb-admin-edit-order-css', 'rtl', 'replace' );
 
 		wp_enqueue_style( 'wc-pb-admin-css' );
 
-		// Get admin screen id.
+		// Get admin screen ID.
 		$screen    = get_current_screen();
 		$screen_id = $screen ? $screen->id : '';
 
-		// WooCommerce admin pages.
-		if ( in_array( $screen_id, array( 'product' ) ) ) {
+		/*
+		 * Enqueue styles.
+		 */
+		if ( in_array( $screen_id, array( 'edit-product', 'product' ) ) ) {
+			wp_enqueue_style( 'wc-pb-admin-product-css' );
+		} elseif ( in_array( $screen_id, array( 'shop_order', 'edit-shop_order', 'shop_subscription', 'edit-shop_subscription' ) ) ) {
+			wp_enqueue_style( 'wc-pb-admin-edit-order-css' );
+		}
+
+		/*
+		 * Enqueue scripts.
+		 */
+		if ( 'product' === $screen_id ) {
 
 			wp_enqueue_script( 'wc-pb-admin-product-panel' );
 
@@ -145,17 +164,14 @@ class WC_PB_Admin {
 			$params = array(
 				'add_bundled_product_nonce' => wp_create_nonce( 'wc_bundles_add_bundled_product' ),
 				'group_modes_with_parent'   => $group_modes_with_parent,
+				'is_first_bundle'           => isset( $_GET[ 'wc_pb_first_bundle' ] ) ? 'yes' : 'no',
 				'is_wc_version_gte_3_2'     => WC_PB_Core_Compatibility::is_wc_version_gte( '3.2' ) ? 'yes' : 'no'
 			);
 
 			wp_localize_script( 'wc-pb-admin-product-panel', 'wc_bundles_admin_params', $params );
-		}
 
-		if ( in_array( $screen_id, array( 'edit-product', 'product' ) ) ) {
-			wp_enqueue_style( 'wc-pb-admin-product-css' );
-		}
+		} elseif ( 'edit-product' === $screen_id ) {
 
-		if ( $screen_id === 'edit-product' ) {
 			wc_enqueue_js( "
 				jQuery( function( $ ) {
 					jQuery( '.show_insufficient_stock_items' ).on( 'click', function() {
@@ -173,10 +189,21 @@ class WC_PB_Admin {
 					} );
 				} );
 			" );
-		}
 
-		if ( in_array( $screen_id, array( 'shop_order', 'edit-shop_order' ) ) ) {
-			wp_enqueue_style( 'wc-pb-admin-edit-order-css' );
+		} elseif ( in_array( $screen_id, array( 'shop_order', 'shop_subscription' ) ) ) {
+
+			wp_enqueue_script( 'wc-pb-admin-order-panel' );
+
+			$params = array(
+				'edit_bundle_nonce'     => wp_create_nonce( 'wc_bundles_edit_bundle' ),
+				'is_wc_version_gte_3_4' => WC_PB_Core_Compatibility::is_wc_version_gte( '3.4' ) ? 'yes' : 'no',
+				'i18n_configure'        => __( 'Configure', 'woocommerce-product-bundles' ),
+				'i18n_edit'             => __( 'Edit', 'woocommerce-product-bundles' ),
+				'i18n_form_error'       => __( 'Failed to initialize form. If this issue persists, please reload the page and try again.', 'woocommerce-product-bundles' ),
+				'i18n_validation_error' => __( 'Failed to validate configuration. If this issue persists, please reload the page and try again.', 'woocommerce-product-bundles' )
+			);
+
+			wp_localize_script( 'wc-pb-admin-order-panel', 'wc_bundles_admin_order_params', $params );
 		}
 	}
 
@@ -291,6 +318,31 @@ class WC_PB_Admin {
 
 		$report = new WC_PB_Report_Insufficient_Stock;
 		$report->output_report();
+	}
+
+	/**
+	 * Renders a notice in the "Insufficient stock" report page.
+	 *
+	 * @since  5.9.0
+	 *
+	 * @return void
+	 */
+	public static function maybe_add_insufficient_stock_report_notice() {
+
+		$screen    = get_current_screen();
+		$screen_id = $screen ? $screen->id : '';
+
+		if ( 'woocommerce_page_wc-reports' !== $screen_id ) {
+			return;
+		}
+
+		if ( empty( $_GET[ 'bundle_id' ] ) ) {
+			return;
+		}
+
+		$bundle = wc_get_product( absint( $_GET[ 'bundle_id' ] ) );
+		$notice = sprintf( __( 'You are currently viewing a filtered version of this report for <strong>%1$s</strong>. <a href="%2$s" class="wc_pb_forward">Clear Filter</a>', 'woocommerce-product-bundles' ), $bundle->get_title(), admin_url( 'admin.php?page=wc-reports&tab=stock&report=insufficient_stock' ) );
+		WC_PB_Admin_Notices::add_notice( $notice, 'info' );
 	}
 }
 

@@ -526,8 +526,20 @@ class WC_Bundled_Item_Data {
 
 		$updated_meta_keys = array();
 
-		// Update or delete meta from the db depending on their presence.
+		// Update or delete meta from the db.
 		if ( ! empty( $raw_meta_data ) ) {
+
+			// Min quantity changed? Invalidate stock status.
+			foreach ( $raw_meta_data as $meta ) {
+				if ( 'quantity_min' === $meta->meta_key ) {
+					if ( isset( $this->meta_data[ 'quantity_min' ] ) && absint( $meta->meta_value ) !== absint( $this->meta_data[ 'quantity_min' ] ) ) {
+						unset( $this->meta_data[ 'stock_status' ] );
+						unset( $this->meta_data[ 'max_stock' ] );
+					}
+				}
+			}
+
+			// Update or delete meta from the db depending on their presence.
 			foreach ( $raw_meta_data as $meta ) {
 				if ( isset( $this->meta_data[ $meta->meta_key ] ) && null !== $this->meta_data[ $meta->meta_key ] && ! in_array( $meta->meta_key, $updated_meta_keys ) ) {
 					update_metadata_by_mid( 'bundled_item', $meta->meta_id, $this->meta_data[ $meta->meta_key ], $meta->meta_key );
@@ -547,6 +559,7 @@ class WC_Bundled_Item_Data {
 			}
 		}
 
+		// Clear meta cache.
 		$cache_key = WC_Cache_Helper::get_cache_prefix( 'bundled_item_meta' ) . $this->get_id();
 		wp_cache_delete( $cache_key, 'bundled_item_meta' );
 

@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * The bunded item class is a product container that initializes and holds pricing, availability and variation/attribute-related data of a bundled product.
  *
  * @class    WC_Bundled_Item
- * @version  5.7.9
+ * @version  5.8.0
  */
 class WC_Bundled_Item {
 
@@ -524,7 +524,7 @@ class WC_Bundled_Item {
 	 *
 	 * @param  bool  $force
 	 */
-	private function sync_prices( $force = false ) {
+	protected function sync_prices( $force = false ) {
 
 		if ( $this->synced_prices && false === $force ) {
 			return false;
@@ -1198,6 +1198,43 @@ class WC_Bundled_Item {
 	/**
 	 * Returns the variation attributes array if this product is variable.
 	 *
+	 * @since  5.8.0
+	 *
+	 * @param  string  $variation_attribute_name
+	 * @return array
+	 */
+	public function is_product_variation_attribute_configurable( $variation_attribute_name ) {
+
+		$configurable_variation_attributes = $this->get_product_variation_attributes( true );
+
+		return isset( $configurable_variation_attributes[ $variation_attribute_name ] );
+	}
+
+	/**
+	 * Returns the variation attributes array if this product is variable.
+	 *
+	 * @since  5.8.0
+	 *
+	 * @param  string  $variation_attribute_name
+	 * @return array
+	 */
+	public function display_product_variation_attribute_dropdown( $variation_attribute_name ) {
+
+		$display_dropdown = $this->is_product_variation_attribute_configurable( $variation_attribute_name );
+
+		/**
+		 * 'woocommerce_force_show_bundled_variation_attribute_option_dropdown' filter.
+		 *
+		 * @param  boolean  $force_show
+		 * @param  array    $args
+		 */
+		return $display_dropdown ? $display_dropdown : apply_filters( 'woocommerce_force_show_bundled_variation_attribute_option_dropdown', false, $variation_attribute_name, $this );
+	}
+
+	/**
+	 * Returns the (configurable) variation attributes array if this product is variable.
+	 *
+	 * @param  bool  $return_configurable
 	 * @return array
 	 */
 	public function get_product_variation_attributes( $return_configurable = false ) {
@@ -1420,7 +1457,9 @@ class WC_Bundled_Item {
 		$children = array();
 
 		if ( $this->exists() ) {
+
 			$children = $this->product->get_children();
+
 			if ( ! empty( $children ) ) {
 				$children = $this->filter_children( $children, $this->product );
 			}
@@ -1692,7 +1731,7 @@ class WC_Bundled_Item {
 
 		if ( $deprecated ) {
 			_deprecated_argument( __METHOD__ . '()', '5.5.0', 'Invalid argument: #3.' );
-			if ( is_a( $deprecated, 'WC_Product' ) ) {
+			if ( $deprecated instanceof WC_Product ) {
 				$args[ 'product' ] = $deprecated;
 			}
 		}
@@ -1821,9 +1860,19 @@ class WC_Bundled_Item {
 		 */
 		$checked = apply_filters( 'woocommerce_bundled_item_is_optional_checked', false, $this );
 
+		/**
+		 * 'woocommerce_product_bundle_field_prefix' filter.
+		 *
+		 * Used to post unique bundle data when posting multiple bundle configurations that could include the same bundle multiple times.
+		 *
+		 * @param  string  $prefix
+		 * @param  mixed   $product_id
+		 */
+		$posted_field_prefix = apply_filters( 'woocommerce_product_bundle_field_prefix', '', $this->get_bundle_id() );
+
 		// When posting bundled item data, set the checked status accordingly.
-		if ( isset( $_REQUEST[ apply_filters( 'woocommerce_product_bundle_field_prefix', '', $this->get_bundle_id() ) . 'bundle_quantity_' . $this->get_id() ] ) ) {
-			if ( isset( $_REQUEST[ apply_filters( 'woocommerce_product_bundle_field_prefix', '', $this->get_bundle_id() ) . 'bundle_selected_optional_' . $this->get_id() ] ) ) {
+		if ( isset( $_REQUEST[ $posted_field_prefix . 'bundle_quantity_' . $this->get_id() ] ) ) {
+			if ( isset( $_REQUEST[ $posted_field_prefix . 'bundle_selected_optional_' . $this->get_id() ] ) ) {
 				$checked = true;
 			} else {
 				$checked = false;
@@ -1847,9 +1896,9 @@ class WC_Bundled_Item {
 	 *
 	 * @return string
 	 */
-	public function get_classes() {
+	public function get_classes( $implode = true ) {
 
-		$classes = array();
+		$classes = array( 'bundled_product', 'bundled_product_summary', 'product' );
 
 		if ( $this->get_quantity( 'min' ) !== $this->get_quantity( 'max' ) && $this->is_in_stock() ) {
 			$classes[] = 'has_qty_input';
@@ -1867,7 +1916,15 @@ class WC_Bundled_Item {
 			$classes[] = 'bundled_item_optional';
 		}
 
-		return implode( ' ', apply_filters( 'woocommerce_bundled_item_classes', $classes, $this ) );
+		/**
+		 * 'woocommerce_bundled_item_classes' filter.
+		 *
+		 * @param  array            $classes
+		 * @param  WC_Bundled_Item  $this
+		 */
+		$classes = apply_filters( 'woocommerce_bundled_item_classes', $classes, $this );
+
+		return $implode ? implode( ' ', $classes ) : $classes;
 	}
 
 	/**
@@ -1963,9 +2020,11 @@ class WC_Bundled_Item {
 			$filter_stock_display   = 'no_amount' !== $stock_format && $product->managing_stock() && $product->get_stock_quantity() < $quantity_min;
 
 			if ( $filter_stock_display ) {
+
 				if ( '' === $stock_format ) {
 					add_filter( 'option_woocommerce_stock_format', array( $this, 'filter_stock_format' ) );
 				}
+
 				if ( $stock_notify_threshold ) {
 					add_filter( 'option_woocommerce_notify_low_stock_amount', array( $this, 'filter_notify_low_stock_amount' ) );
 				}
@@ -1976,9 +2035,11 @@ class WC_Bundled_Item {
 			$availability_text  = isset( $availability[ 'availability' ] ) ? $availability[ 'availability' ] : '';
 
 			if ( $filter_stock_display ) {
+
 				if ( '' === $stock_format ) {
 					remove_filter( 'option_woocommerce_stock_format', array( $this, 'filter_stock_format' ) );
 				}
+
 				if ( $stock_notify_threshold ) {
 					remove_filter( 'option_woocommerce_notify_low_stock_amount', array( $this, 'filter_notify_low_stock_amount' ) );
 				}
@@ -2075,6 +2136,7 @@ class WC_Bundled_Item {
 					} elseif ( WC_Subscriptions_Synchroniser::is_product_prorated( $product ) ) {
 
 						switch ( WC_Subscriptions_Product::get_period( $product ) ) {
+
 							case 'week' :
 								$days_in_cycle = 7 * WC_Subscriptions_Product::get_interval( $product );
 								break;
@@ -2088,6 +2150,9 @@ class WC_Bundled_Item {
 
 						$days_until_next_payment = ceil( ( $next_payment_date - gmdate( 'U' ) ) / ( 60 * 60 * 24 ) );
 						$price                   = (double) $sign_up_fee + $days_until_next_payment * ( (double) $recurring_price / $days_in_cycle );
+
+					} elseif ( method_exists( 'WC_Subscriptions_Synchroniser', 'is_payment_upfront' ) && WC_Subscriptions_Synchroniser::is_payment_upfront( $product ) ) {
+						$price = (double) $price + (double) $recurring_price;
 					}
 
 				} else {

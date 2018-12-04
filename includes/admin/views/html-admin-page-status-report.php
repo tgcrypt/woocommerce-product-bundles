@@ -25,13 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<td>
 			<?php
 
-				$version = WC_PB()->version;
-
-				// Remove suffixes.
-				$version_parts = explode( '-', $version );
-				$version       = sizeof( $version_parts ) === 2 ? $version_parts[ 0 ] : $version;
-
-				if ( version_compare( $debug_data[ 'db_version' ], $version, '<=' ) ) {
+				if ( version_compare( $debug_data[ 'db_version' ], WC_PB()->plugin_version( true ), '<=' ) ) {
 					echo '<mark class="yes">' . esc_html( $debug_data[ 'db_version' ] ) . '</mark>';
 				} else {
 					echo '<mark class="error"><span class="dashicons dashicons-warning"></span> ' . esc_html( $debug_data[ 'db_version' ] ) . ' - ' . __( 'Database version mismatch.', 'woocommerce-product-bundles' ) . '</mark>';

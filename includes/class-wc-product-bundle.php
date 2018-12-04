@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Product Bundle Class.
  *
  * @class    WC_Product_Bundle
- * @version  5.7.8
+ * @version  5.8.1
  */
 class WC_Product_Bundle extends WC_Product {
 
@@ -107,7 +107,7 @@ class WC_Product_Bundle extends WC_Product {
 	public function __construct( $product ) {
 
 		// Initialize the data store type. Yes, WC 3.0 decouples the data store from the product class.
-		if ( is_a( $product, 'WC_Product' ) && false === $product->is_type( 'bundle' ) ) {
+		if ( ( $product instanceof WC_Product ) && false === $product->is_type( 'bundle' ) ) {
 			$this->data_store_type = $product->get_type();
 		}
 
@@ -417,6 +417,19 @@ class WC_Product_Bundle extends WC_Product {
 			}
 		}
 
+		/**
+		 * 'woocommerce_bundle_min/max_raw_[regular_]price' filters.
+		 *
+		 * @since  5.8.1
+		 *
+		 * @param  mixed              $price
+		 * @param  WC_Product_Bundle  $this
+		 */
+		$min_raw_price         = apply_filters( 'woocommerce_bundle_min_raw_price', $min_raw_price, $this );
+		$min_raw_regular_price = apply_filters( 'woocommerce_bundle_min_raw_regular_price', $min_raw_regular_price, $this );
+		$max_raw_price         = apply_filters( 'woocommerce_bundle_max_raw_price', $max_raw_price, $this );
+		$max_raw_regular_price = apply_filters( 'woocommerce_bundle_max_raw_regular_price', $max_raw_regular_price, $this );
+
 		$raw_price_meta_changed = false;
 
 		if ( $this->get_min_raw_price( 'sync' ) !== $min_raw_price || $this->get_min_raw_regular_price( 'sync' ) !== $min_raw_regular_price || $this->get_max_raw_price( 'sync' ) !== $max_raw_price || $this->get_max_raw_regular_price( 'sync' ) !== $max_raw_regular_price ) {
@@ -591,6 +604,11 @@ class WC_Product_Bundle extends WC_Product {
 			} else {
 				$bundle_price_data[ 'price_string' ] = '%s';
 			}
+
+			$group_mode              = $this->get_group_mode();
+			$group_mode_options_data = self::get_group_mode_options_data();
+
+			$bundle_price_data[ 'group_mode_features' ] = ! empty( $group_mode_options_data[ $group_mode ][ 'features' ] ) && is_array( $group_mode_options_data[ $group_mode ][ 'features' ] ) ? $group_mode_options_data[ $group_mode ][ 'features' ] : array();
 
 			/**
 			 * 'woocommerce_bundle_price_data' filter.
@@ -806,6 +824,8 @@ class WC_Product_Bundle extends WC_Product {
 						}
 					}
 				}
+
+				$this->bundle_price_cache[ $cache_key ] = $price;
 			}
 
 		} else {
@@ -871,6 +891,7 @@ class WC_Product_Bundle extends WC_Product {
 			$subs_details            = array();
 			$subs_details_html       = array();
 			$non_optional_subs_exist = false;
+			$has_payment_up_front    = false;
 
 			foreach ( $bundled_items as $bundled_item_id => $bundled_item ) {
 
@@ -903,17 +924,24 @@ class WC_Product_Bundle extends WC_Product {
 					$subs_details[ $sub_string ][ 'regular_price' ] += $bundled_item->get_quantity( 'min', array( 'context' => 'price', 'check_optional' => true ) ) * WC_PB_Product_Prices::get_product_price( $product, array( 'price' => $bundled_item->min_regular_recurring_price, 'calc' => 'display' ) );
 
 					if ( $bundled_item->is_variable_subscription() ) {
+
 						$bundled_item->add_price_filters();
+
 						if ( $bundled_product->get_variation_price( 'min' ) !== $bundled_product->get_variation_price( 'max' ) || $bundled_product->get_meta( '_min_variation_period', true ) !== $bundled_product->get_meta( '_max_variation_period', true ) || $bundled_product->get_meta( '_min_variation_period_interval', true ) !== $bundled_product->get_meta( '_max_variation_period_interval', true ) ) {
 							if ( $bundled_item->is_priced_individually() ) {
 								$subs_details[ $sub_string ][ 'is_range' ] = true;
 							}
 						}
+
 						$bundled_item->remove_price_filters();
 					}
 
 					if ( ! isset( $subs_details[ $sub_string ][ 'price_html' ] ) ) {
 						$subs_details[ $sub_string ][ 'price_html' ] = WC_PB_Product_Prices::get_recurring_price_html_component( $product );
+					}
+
+					if ( ! $has_payment_up_front && method_exists( 'WC_Subscriptions_Synchroniser', 'is_payment_upfront' ) && WC_Subscriptions_Synchroniser::is_payment_upfront( $product ) ) {
+						$has_payment_up_front = true;
 					}
 				}
 			}
@@ -923,6 +951,7 @@ class WC_Product_Bundle extends WC_Product {
 				$from_string = $this->get_bundle_regular_price( 'min' ) != 0 ? _x( '<span class="from">from </span>', 'min-price', 'woocommerce-product-bundles' ) : _x( '<span class="from">From: </span>', 'min-price', 'woocommerce-product-bundles' );
 
 				foreach ( $subs_details as $sub_details ) {
+
 					if ( $sub_details[ 'regular_price' ] > 0 ) {
 
 						$sub_price_html = wc_price( $sub_details[ 'price' ] );
@@ -938,8 +967,11 @@ class WC_Product_Bundle extends WC_Product {
 							}
 
 						} elseif ( $sub_details[ 'price' ] == 0 && ! $sub_details[ 'is_range' ] ) {
+
 							$sub_price_html = __( 'Free!', 'woocommerce' );
+
 						} else {
+
 							if ( $sub_details[ 'is_range' ] ) {
 								$sub_price_html = sprintf( _x( '%1$s%2$s', 'Price range: from', 'woocommerce-product-bundles' ), $from_string, $sub_price_html );
 							}
@@ -953,7 +985,7 @@ class WC_Product_Bundle extends WC_Product {
 				$price_html        = implode( '<span class="plus"> + </span>', $subs_details_html );
 				$has_multiple_subs = sizeof( $subs_details_html ) > 1;
 				$prices_equal      = 1 === sizeof( $subs_details_html ) && strpos( $subs_details_html[ 0 ], $price ) !== false;
-				$show_now          = ( $has_multiple_subs || false === $prices_equal ) && $this->get_bundle_regular_price( 'min' ) != 0;
+				$show_now          = ( $has_multiple_subs || false === $prices_equal || $has_payment_up_front ) && $this->get_bundle_regular_price( 'min' ) != 0;
 
 				if ( $show_now ) {
 					$price = sprintf( _x( '%1$s<span class="bundled_subscriptions_price_html" %2$s> now,</br>then %3$s</span>', 'subscription price html suffix', 'woocommerce-product-bundles' ), $price, ! empty( $subs_details_html ) ? '' : 'style="display:none"', $price_html );
@@ -1198,7 +1230,6 @@ class WC_Product_Bundle extends WC_Product {
 	public function get_permalink() {
 
 		$permalink     = get_permalink( $this->get_id() );
-		$config_data   = false;
 		$fn_args_count = func_num_args();
 
 		if ( 1 === $fn_args_count ) {
@@ -1207,55 +1238,15 @@ class WC_Product_Bundle extends WC_Product {
 
 			if ( is_array( $cart_item ) && isset( $cart_item[ 'stamp' ] ) && is_array( $cart_item[ 'stamp' ] ) ) {
 
-				$config_data = $cart_item[ 'stamp' ];
-				$args        = array();
+				$config_data = isset( $cart_item[ 'stamp' ] ) ? $cart_item[ 'stamp' ] : array();
+				$args        = apply_filters( 'woocommerce_bundle_cart_permalink_args', WC_PB()->cart->rebuild_posted_bundle_form_data( $config_data ), $cart_item, $this );
 
-				foreach ( $config_data as $item_id => $item_config_data ) {
-
-					if ( isset( $item_config_data[ 'optional_selected' ] ) ) {
-						if ( 'yes' === $item_config_data[ 'optional_selected' ] ) {
-							$args[ 'bundle_selected_optional_' . $item_id ] = $item_config_data[ 'optional_selected' ];
-						} else {
-							continue;
-						}
-					}
-
-					if ( isset( $item_config_data[ 'quantity' ] ) ) {
-						$args[ 'bundle_quantity_' . $item_id ] = $item_config_data[ 'quantity' ];
-					}
-
-					if ( isset( $item_config_data[ 'variation_id' ] ) ) {
-						$args[ 'bundle_variation_id_' . $item_id ] = $item_config_data[ 'variation_id' ];
-					}
-
-					if ( isset( $item_config_data[ 'attributes' ] ) && is_array( $item_config_data[ 'attributes' ] ) ) {
-						foreach ( $item_config_data[ 'attributes' ] as $tax => $val ) {
-							$args[ 'bundle_' . $tax . '_' . $item_id ] = sanitize_title( $val );
-						}
-					}
-				}
-
-				if ( $this->is_editable_in_cart( $cart_item ) ) {
-
-					// Find the cart id we are updating.
-
-					$cart_id = '';
-
-					foreach ( WC()->cart->cart_contents as $item_key => $item_values ) {
-						if ( isset( $item_values[ 'bundled_items' ] ) && $item_values[ 'stamp' ] === $cart_item[ 'stamp' ] ) {
-							$cart_id = $item_key;
-						}
-					}
-
-					if ( $cart_id ) {
-						$args[ 'update-bundle' ] = $cart_id;
-					}
-				}
-
-				$args = apply_filters( 'woocommerce_bundle_cart_permalink_args', $args, $cart_item, $this );
+				// Filter and encode keys and values so this is not broken by add_query_arg.
+				$args_data = array_map( 'urlencode', $args );
+				$args_keys = array_map( 'urlencode', array_keys( $args ) );
 
 				if ( ! empty( $args ) ) {
-					$permalink = esc_url( add_query_arg( $args, $permalink ) );
+					$permalink = add_query_arg( array_combine( $args_keys, $args_data ), $permalink );
 				}
 			}
 		}
@@ -2370,7 +2361,8 @@ class WC_Product_Bundle extends WC_Product {
 		if ( is_null( self::$layout_options_data ) ) {
 			self::$layout_options_data = apply_filters( 'woocommerce_bundles_supported_layouts', array(
 				'default' => __( 'Standard', 'woocommerce-product-bundles' ),
-				'tabular' => __( 'Tabular', 'woocommerce-product-bundles' )
+				'tabular' => __( 'Tabular', 'woocommerce-product-bundles' ),
+				'grid'    => __( 'Grid', 'woocommerce-product-bundles' )
 			) );
 		}
 		return self::$layout_options_data;
@@ -2423,12 +2415,15 @@ class WC_Product_Bundle extends WC_Product {
 	/**
 	 * Group mode data. Details:
 	 *
-	 * - 'parent_item':          Container/parent line item visible in cart/order templates.
-	 * - 'child_item_indent':    Bundled/child line items indented in cart/order templates.
-	 * - 'aggregated_prices':    Bundled/child cart item prices are aggregated into their container/parent.
-	 * - 'aggregated_subtotals': Bundled/child cart/order item subtotals are aggregated into their container/parent.
-	 * - 'child_item_meta':      "Part of" meta appended to bundled/child cart/order line items.
-	 * - 'faked_parent_item':    First bundled/child line item acting as container/parent.
+	 * - 'parent_item':                  Container/parent line item visible in cart/order templates.
+	 * - 'child_item_indent':            Bundled/child line items indented in cart/order templates.
+	 * - 'aggregated_prices':            Bundled/child cart item prices are aggregated into their container/parent.
+	 * - 'aggregated_subtotals':         Bundled/child cart/order item subtotals are aggregated into their container/parent.
+	 * - 'child_item_meta':              "Part of" meta appended to bundled/child cart/order line items.
+	 * - 'parent_cart_widget_item_meta': "Includes" meta appended to container/parent cart widget line items.
+	 * - 'parent_cart_item_meta':        "Includes" meta appended to container/parent cart line items.
+	 * - 'component_multiselect':        Replaces the parent title with configuration details in all applicable templates.
+	 * - 'faked_parent_item':            First bundled/child line item acting as container/parent.
 	 *
 	 * Using the first child as a "fake" container:
 	 *
@@ -2440,25 +2435,28 @@ class WC_Product_Bundle extends WC_Product {
 	 * @return array
 	 */
 	private static function get_group_mode_options_data() {
+
 		if ( is_null( self::$group_mode_options_data ) ) {
+
 			self::$group_mode_options_data = apply_filters( 'woocommerce_bundles_group_mode_options_data', array(
 				'parent'   => array(
-					'title'      => __( 'Default', 'woocommerce-product-bundles' ),
-					'features'   => array( 'parent_item', 'child_item_indent', 'aggregated_prices', 'aggregated_subtotals' ),
+					'title'      => __( 'Grouped', 'woocommerce-product-bundles' ),
+					'features'   => array( 'parent_item', 'child_item_indent', 'aggregated_prices', 'aggregated_subtotals', 'parent_cart_widget_item_meta' ),
 					'is_visible' => true
 				),
 				'noindent' => array(
-					'title'      => __( 'No indent', 'woocommerce-product-bundles' ),
+					'title'      => __( 'Flat', 'woocommerce-product-bundles' ),
 					'features'   => array( 'parent_item', 'child_item_meta' ),
 					'is_visible' => true
 				),
 				'none'     => array(
-					'title'      => __( 'No parent', 'woocommerce-product-bundles' ),
+					'title'      => __( 'None', 'woocommerce-product-bundles' ),
 					'features'   => array( 'child_item_meta' ),
 					'is_visible' => true
 				)
 			) );
 		}
+
 		return self::$group_mode_options_data;
 	}
 
